@@ -219,6 +219,8 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     /**
+     * 启动messageStore
+     *
      * @throws Exception
      */
     public void start() throws Exception {
@@ -280,7 +282,9 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         if (!messageStoreConfig.isEnableDLegerCommitLog()) {
+            //启动ha
             this.haService.start();
+            //处理定时消息
             this.handleScheduleMessageService(messageStoreConfig.getBrokerRole());
         }
 
@@ -1875,6 +1879,9 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 消息再投递
+     */
     class ReputMessageService extends ServiceThread {
 
         private volatile long reputFromOffset = 0;
