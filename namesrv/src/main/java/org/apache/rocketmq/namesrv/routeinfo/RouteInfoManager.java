@@ -428,6 +428,9 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 心跳事件超过一定时间（默认2分钟）从nameServer中移除
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {

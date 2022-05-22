@@ -17,6 +17,9 @@
 
 package org.apache.rocketmq.common.protocol;
 
+/**
+ * P1 rocketmq netty 请求事件code
+ */
 public class RequestCode {
 
     public static final int SEND_MESSAGE = 10;

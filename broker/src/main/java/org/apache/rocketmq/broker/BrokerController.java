@@ -232,6 +232,12 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+    /**
+     * P1 初始化brokerController对象
+     *
+     * @return
+     * @throws CloneNotSupportedException
+     */
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 
@@ -241,6 +247,7 @@ public class BrokerController {
 
         if (result) {
             try {
+                //P1 初始化message store
                 this.messageStore =
                         new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener,
                                 this.brokerConfig);
@@ -331,7 +338,7 @@ public class BrokerController {
                             "ConsumerManageThread_"));
 
             this.registerProcessor();
-
+            //P2 初始化定时器
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
             final long period = 1000 * 60 * 60 * 24;
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
@@ -349,6 +356,7 @@ public class BrokerController {
                 @Override
                 public void run() {
                     try {
+                        //持久化消费位点
                         BrokerController.this.consumerOffsetManager.persist();
                     } catch (Throwable e) {
                         log.error("schedule persist consumerOffset error.", e);
@@ -439,7 +447,7 @@ public class BrokerController {
                     }, 1000 * 10, 1000 * 60, TimeUnit.MILLISECONDS);
                 }
             }
-
+            //tls动态刷新
             if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
                 // Register a listener to reload SslContext
                 try {
@@ -480,6 +488,7 @@ public class BrokerController {
                     log.warn("FileWatchService created error, can't load the certificate dynamically");
                 }
             }
+            //P2 初始化事务实现、acl控制、rpc钩子函数
             initialTransaction();
             initialAcl();
             initialRpcHooks();
@@ -849,6 +858,11 @@ public class BrokerController {
         return this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
     }
 
+    /**
+     * P1 启动brokerController
+     *
+     * @throws Exception
+     */
     public void start() throws Exception {
         if (this.messageStore != null) {
             this.messageStore.start();
@@ -887,7 +901,7 @@ public class BrokerController {
             handleSlaveSynchronize(messageStoreConfig.getBrokerRole());
             this.registerBrokerAll(true, false, true);
         }
-
+        //每隔10秒钟判断是否需要注册broker到nameServer
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -929,6 +943,13 @@ public class BrokerController {
         doRegisterBrokerAll(true, false, topicConfigSerializeWrapper);
     }
 
+    /**
+     * 注册broker到nameServer
+     *
+     * @param checkOrderConfig
+     * @param oneway
+     * @param forceRegister
+     */
     public synchronized void registerBrokerAll(final boolean checkOrderConfig, boolean oneway, boolean forceRegister) {
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
 
@@ -949,6 +970,7 @@ public class BrokerController {
                 this.brokerConfig.getBrokerName(),
                 this.brokerConfig.getBrokerId(),
                 this.brokerConfig.getRegisterBrokerTimeoutMills())) {
+            //P1 注册broker到nameserver
             doRegisterBrokerAll(checkOrderConfig, oneway, topicConfigWrapper);
         }
     }
@@ -983,6 +1005,16 @@ public class BrokerController {
         }
     }
 
+    /**
+     * 判断是否需要注册
+     *
+     * @param clusterName
+     * @param brokerAddr
+     * @param brokerName
+     * @param brokerId
+     * @param timeoutMills
+     * @return
+     */
     private boolean needRegister(final String clusterName,
                                  final String brokerAddr,
                                  final String brokerName,
@@ -1225,6 +1257,11 @@ public class BrokerController {
         log.info("Finish to change to master brokerName={}", brokerConfig.getBrokerName());
     }
 
+    /**
+     * 只有主节点会启动事务管理器check接口
+     *
+     * @param role
+     */
     private void startProcessorByHa(BrokerRole role) {
         if (BrokerRole.SLAVE != role) {
             if (this.transactionalMessageCheckService != null) {
